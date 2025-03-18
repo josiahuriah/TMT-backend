@@ -22,15 +22,20 @@ migrate = Migrate()
 def create_app():
     load_dotenv()  # Load .env variables
     app = Flask(__name__)
-    logger.debug(f"Current directory: {os.getcwd()}")
-    instance_dir = os.path.join(os.path.dirname(__file__), "instance")
-    os.makedirs(instance_dir, exist_ok=True)
-    db_path = os.path.join(instance_dir, "cars.db")
-    logger.debug(f"Database path: {db_path}")
-    CORS(app, origins=["http://localhost:5001"])  # Update to frontend URL later
+    CORS(app, origins=["http://localhost:5173"])  # Update to frontend URL later
+
+    db_uri = os.getenv("DATABASE_URL", "sqlite:///instance/cars.db")
+    if db_uri.startswith("postgres://"):
+        db_uri = db_uri.replace("postgres://", "postgresql://", 1)
+
+    # logger.debug(f"Current directory: {os.getcwd()}")
+    # instance_dir = os.path.join(os.path.dirname(__file__), "instance")
+    # os.makedirs(instance_dir, exist_ok=True)
+    # db_path = os.path.join(instance_dir, "cars.db")
+    # logger.debug(f"Database path: {db_path}")
 
     # Configure the app
-    app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", f"sqlite:///{db_path}")
+    app.config["SQLALCHEMY_DATABASE_URI"] = db_uri
     app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "dijah_bei")
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
