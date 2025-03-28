@@ -1,23 +1,20 @@
-# /Users/jduncanson/Documents/TMT_Rental/server/models.py
-from create_app import db
+from flask_sqlalchemy import SQLAlchemy
 
-class Car(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    model = db.Column(db.String(100), nullable=False)
-    category = db.Column(db.String(50), nullable=False)  # e.g., "Economy", "Van", "Full-Size Sedan", "SUV", "Luxury"
-    price_per_day = db.Column(db.Float, nullable=False)
-    available = db.Column(db.Boolean, default=True)
-    quantity = db.Column(db.Integer, default=1)
-
-class User(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
-    password = db.Column(db.String(200), nullable=False)
+db = SQLAlchemy()
 
 class CarCategory(db.Model):
+    __tablename__ = "car_categories"  # Explicitly set table name
     id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(100), nullable=False)
-    image = db.Column(db.String(200), nullable=False)
-    description = db.Column(db.String(200), nullable=False)
-    rate = db.Column(db.Integer, nullable=False)
+    title = db.Column(db.String(50), nullable=False)
+    image = db.Column(db.String(255))
+    description = db.Column(db.Text)
+    rate = db.Column(db.Float)
+
+class Car(db.Model):
+    __tablename__ = "cars"  # Ensure this matches too
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    model = db.Column(db.String(50))
+    category = db.Column(db.String(50), nullable=False)
+    price_per_day = db.Column(db.Float)
+    quantity = db.Column(db.Integer, default=1)
