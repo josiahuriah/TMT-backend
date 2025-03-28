@@ -8,12 +8,12 @@ db = SQLAlchemy()
 
 def create_app():
     app = Flask(__name__)
-
-    # Use Render's DATABASE_URL with correct format
-    app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL").replace("postgres://", "postgresql://")
+    uri = os.getenv("DATABASE_URL").replace("postgres://", "postgresql://")
+    print(f"DEBUG: Connecting to {uri}")  # Add this
+    app.config["SQLALCHEMY_DATABASE_URI"] = uri
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-    db.init_app(app)  # Bind db to the app
+    db.init_app(app)
 
     from routes import bp
     app.register_blueprint(bp)
