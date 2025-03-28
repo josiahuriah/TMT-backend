@@ -1,9 +1,8 @@
-from flask_sqlalchemy import SQLAlchemy
-
-db = SQLAlchemy()
+# models.py
+from create_app import db  # Import db from create_app
 
 class CarCategory(db.Model):
-    __tablename__ = "car_categories"  # Match the database table name
+    __tablename__ = "car_categories"
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(50), nullable=False)
     image = db.Column(db.String(255))
