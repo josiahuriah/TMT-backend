@@ -1,14 +1,16 @@
-# create_app.py
 import os
+import time  
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import exc
+from flask_cors import CORS  
 
 db = SQLAlchemy()
 
 def create_app():
     app = Flask(__name__)
-    CORS(app)
+    CORS(app)  
+
     uri = os.getenv("DATABASE_URL").replace("postgres://", "postgresql://")
     app.config["SQLALCHEMY_DATABASE_URI"] = uri
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
