@@ -1,5 +1,4 @@
-# models.py
-from create_app import db  # Import db from create_app
+from create_app import db  
 
 class CarCategory(db.Model):
     __tablename__ = "car_categories"
