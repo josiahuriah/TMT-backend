@@ -1,5 +1,6 @@
 import os
 import time  
+from sqlalchemy import exc, text
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import exc
@@ -19,7 +20,7 @@ def create_app():
         try:
             db.init_app(app)
             with app.app_context():
-                db.session.execute("SELECT 1")  # Test connection
+                db.session.execute(text("SELECT 1"))  # Test connection
             break
         except exc.OperationalError as e:
             print(f"Database connection failed: {e}. Retrying...")
