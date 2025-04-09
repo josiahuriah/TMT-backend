@@ -1,16 +1,16 @@
 import os
-import time  
+import time
 from sqlalchemy import exc, text
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import exc
-from flask_cors import CORS  
+from flask_cors import CORS
+from flask_migrate import Migrate  # <-- Import here
 
 db = SQLAlchemy()
 
 def create_app():
     app = Flask(__name__)
-    CORS(app)  
+    CORS(app)
 
     uri = os.getenv("DATABASE_URL").replace("postgres://", "postgresql://")
     app.config["SQLALCHEMY_DATABASE_URI"] = uri
@@ -30,5 +30,8 @@ def create_app():
 
     from routes import bp
     app.register_blueprint(bp)
+
+    # Initialize Flask-Migrate with the app and db
+    migrate = Migrate(app, db)
 
     return app

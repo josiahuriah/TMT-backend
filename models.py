@@ -1,4 +1,22 @@
-from create_app import db  
+from create_app import db
+from datetime import datetime
+
+class Reservation(db.Model):
+    __tablename__ = "reservations"
+
+    id = db.Column(db.Integer, primary_key=True)
+    firstname = db.Column(db.String(50), nullable=False)
+    lastname = db.Column(db.String(50), nullable=False)
+    email = db.Column(db.String(100), nullable=False)
+    home = db.Column(db.String(20))
+    cell = db.Column(db.String(20))
+    car_id = db.Column(db.Integer, db.ForeignKey('cars.id'), nullable=False)
+    start_date = db.Column(db.Date, nullable=False)
+    end_date = db.Column(db.Date, nullable=False)
+    total_price = db.Column(db.Float, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    car = db.relationship("Car")
 
 class CarCategory(db.Model):
     __tablename__ = "car_categories"
