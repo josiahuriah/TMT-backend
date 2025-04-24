@@ -1,4 +1,4 @@
-from create_app import db
+from extensions import db
 from datetime import datetime
 
 class Reservation(db.Model):
