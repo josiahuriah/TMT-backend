@@ -14,7 +14,7 @@ def create_app():
          origins=["https://tmt-rental-frontend.onrender.com"],
          supports_credentials=True,
          methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-         allow_headers=["Content-Type", "Authorization"],
+         allow_headers=["Content-Type", "Authorization", "Range"],
          expose_headers=["Content-Range"])
 
     uri = os.getenv("DATABASE_URL").replace("postgres://", "postgresql://")
