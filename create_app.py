@@ -12,6 +12,15 @@ db = SQLAlchemy()
  
 def create_app():
     app = Flask(__name__)
+<<<<<<< HEAD
+=======
+    CORS(app, 
+         origins=["https://tmt-rental-frontend.onrender.com"],
+         supports_credentials=True,
+         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+         allow_headers=["Content-Type", "Authorization", "Range"],
+         expose_headers=["Content-Range"])
+>>>>>>> 52515565a0c3f139ce93acd72140019a814585ea
 
     uri = os.getenv("DATABASE_URL").replace("postgres://", "postgresql://")
     app.config["SQLALCHEMY_DATABASE_URI"] = uri
