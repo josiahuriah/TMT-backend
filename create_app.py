@@ -7,6 +7,7 @@ from flask_cors import CORS
 from flask_migrate import Migrate 
 from extensions import db
 from models import Reservation, Car, CarCategory
+from routes import bp
 
 db = SQLAlchemy()
  
@@ -18,7 +19,7 @@ def create_app():
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
     db.init_app(app)
-    migrate = Migrate(app, db)
+    Migrate(app, db)
 
     CORS(app, 
          origins=["https://tmt-rental-frontend.onrender.com"],

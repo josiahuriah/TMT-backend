@@ -101,3 +101,7 @@ def cancel_reservation(id):
     db.session.delete(reservation)
     db.session.commit()
     return jsonify({"message": "Reservation canceled"}), 200
+
+@bp.route("/", methods=["GET"])
+def home():
+    return {"status": "API is live"}, 200
