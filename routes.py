@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request, make_response
 from models import Reservation 
 from models import Car, CarCategory
-from create_app import db
+from extensions import db
 
 
 bp = Blueprint("routes", __name__)
