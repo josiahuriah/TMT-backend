@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request, make_response
 from models import Reservation 
 from models import Car, CarCategory
 from extensions import db
-
+from datetime import datetime
 
 bp = Blueprint("routes", __name__)
 
@@ -37,71 +37,99 @@ def get_cars():
     
 @bp.route("/reservations", methods=["POST"])
 def create_reservation():
-    data = request.get_json()
+    try:
+        data = request.get_json()
+        
+        # Validate required fields
+        required_fields = ['firstname', 'lastname', 'email', 'car_id', 'start_date', 'end_date', 'total_price']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({"error": f"Missing required field: {field}"}), 400
 
-    car = Car.query.get(data['car_id'])
-    if car.quantity <= 0:
-        return jsonify({"error": "Car not available"}), 400
+        car = Car.query.get(data['car_id'])
+        if not car:
+            return jsonify({"error": "Car not found"}), 404
+            
+        if car.quantity <= 0:
+            return jsonify({"error": "Car not available"}), 400
 
-    reservation = Reservation(
-        firstname=data['firstname'],
-        lastname=data['lastname'],
-        email=data['email'],
-        home=data.get('home'),
-        cell=data.get('cell'),
-        car_id=car.id,
-        start_date=data['start_date'],
-        end_date=data['end_date'],
-        total_price=data['total_price']
-    )
+        # Parse dates
+        try:
+            start_date = datetime.strptime(data['start_date'], '%Y-%m-%d').date()
+            end_date = datetime.strptime(data['end_date'], '%Y-%m-%d').date()
+        except ValueError:
+            return jsonify({"error": "Invalid date format. Use YYYY-MM-DD"}), 400
 
-    # Decrease car availability
-    car.quantity -= 1
+        reservation = Reservation(
+            firstname=data['firstname'],
+            lastname=data['lastname'],
+            email=data['email'],
+            home=data.get('home'),
+            cell=data.get('cell'),
+            car_id=car.id,
+            start_date=start_date,
+            end_date=end_date,
+            total_price=data['total_price']
+        )
 
-    db.session.add(reservation)
-    db.session.commit()
+        # Decrease car availability
+        car.quantity -= 1
 
-    return jsonify({"message": "Reservation successful"}), 201
+        db.session.add(reservation)
+        db.session.commit()
+
+        return jsonify({"message": "Reservation successful"}), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
     
 @bp.route("/reservations", methods=["GET"])
 def get_reservations():
-    # Query all reservations
-    reservations = Reservation.query.all()
-    reservation_list = [{
-        "id": r.id,
-        "firstname": r.firstname,
-        "lastname": r.lastname,
-        "email": r.email,
-        "home": r.home,
-        "cell": r.cell,
-        "car_name": r.car.name,
-        "start_date": r.start_date.isoformat(),
-        "end_date": r.end_date.isoformat(),
-        "total_price": r.total_price,
-        "created_at": r.created_at.isoformat()
-    } for r in reservations]
+    try:
+        # Query all reservations
+        reservations = Reservation.query.all()
+        reservation_list = [{
+            "id": r.id,
+            "firstname": r.firstname,
+            "lastname": r.lastname,
+            "email": r.email,
+            "home": r.home,
+            "cell": r.cell,
+            "car_name": r.car.name,
+            "start_date": r.start_date.isoformat(),
+            "end_date": r.end_date.isoformat(),
+            "total_price": r.total_price,
+            "created_at": r.created_at.isoformat()
+        } for r in reservations]
 
-    # Create response object
-    response = make_response(jsonify(reservation_list))
+        # Create response object
+        response = make_response(jsonify(reservation_list))
 
-    # Add Content-Range header (example: reservations 0-9/10)
-    total_count = len(reservation_list)
-    response.headers['Content-Range'] = f"reservations 0-{total_count - 1}/{total_count}"
-    
-    # Expose the Content-Range header for React Admin
-    response.headers['Access-Control-Expose-Headers'] = 'Content-Range'
+        # Add Content-Range header (example: reservations 0-9/10)
+        total_count = len(reservation_list)
+        response.headers['Content-Range'] = f"reservations 0-{total_count - 1}/{total_count}"
+        
+        # Expose the Content-Range header for React Admin
+        response.headers['Access-Control-Expose-Headers'] = 'Content-Range'
 
-    return response
+        return response
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @bp.route("/reservations/<int:id>", methods=["DELETE"])
 def cancel_reservation(id):
-    reservation = Reservation.query.get_or_404(id)
-    car = Car.query.get(reservation.car_id)
-    car.quantity += 1  # Make car available again
-    db.session.delete(reservation)
-    db.session.commit()
-    return jsonify({"message": "Reservation canceled"}), 200
+    try:
+        reservation = Reservation.query.get_or_404(id)
+        car = Car.query.get(reservation.car_id)
+        car.quantity += 1  # Make car available again
+        db.session.delete(reservation)
+        db.session.commit()
+        return jsonify({"message": "Reservation canceled"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
 
 @bp.route("/", methods=["GET"])
 def home():
-    return {"status": "API is live"}, 200
+    return jsonify({"status": "API is live"}), 200
