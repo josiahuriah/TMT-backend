@@ -54,9 +54,9 @@ def upgrade():
 
 
 def downgrade():
-    op.drop_table('reservations')
-    op.drop_table('cars')
-    op.drop_table('car_categories')
+    op.execute("DROP TABLE IF EXISTS reservations CASCADE;")
+    op.execute("DROP TABLE IF EXISTS cars CASCADE;")
+    op.execute("DROP TABLE IF EXISTS car_categories CASCADE;")
     # op.create_table('car_categories',
     # sa.Column('id', sa.INTEGER(), nullable=False),
     # sa.Column('title', sa.VARCHAR(length=50), nullable=False),
