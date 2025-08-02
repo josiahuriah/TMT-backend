@@ -14,43 +14,47 @@ from routes import bp
 def create_app():
     app = Flask(__name__)
 
-    uri = os.getenv("DATABASE_URL").replace("postgres://", "postgresql://")
-    app.config["SQLALCHEMY_DATABASE_URI"] = uri
+    # Handle database URL properly for both development and production
+    database_url = os.getenv("DATABASE_URL")
+    if database_url and database_url.startswith("postgres://"):
+        database_url = database_url.replace("postgres://", "postgresql://")
+    
+    app.config["SQLALCHEMY_DATABASE_URI"] = database_url
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    app.config["SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "fallback-secret-key")
 
     db.init_app(app)
     Migrate(app, db)
 
+    # CORS configuration for production
+    cors_origins = [
+        "https://tmt-rental-frontend.onrender.com",
+        "http://localhost:3000",  # For local development
+        "http://localhost:5173"   # For Vite dev server
+    ]
+    
+    # If in development, allow all origins
+    if os.getenv("FLASK_ENV") == "development":
+        cors_origins = "*"
+
     CORS(app, 
-         origins=["https://tmt-rental-frontend.onrender.com"],
+         origins=cors_origins,
          supports_credentials=True,
          methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
          allow_headers=["Content-Type", "Authorization", "Range"],
          expose_headers=["Content-Range"])
-    
-    @app.errorhandler(404)
-    def not_found(error):
-        return jsonify({"error": "Not found"}), 404
 
-    @app.errorhandler(400)
-    def bad_request(error):
-        return jsonify({"error": "Bad request"}), 400
-
-    @app.errorhandler(500)
-    def internal_error(error):
-        return jsonify({"error": "Internal server error"}), 500
-
-    # for _ in range(3):  # Retry 3 times
-    #     try:
-    #         db.init_app(app)
-    #         with app.app_context():
-    #             db.session.execute(text("SELECT 1"))  # Test connection
-    #         break
-    #     except exc.OperationalError as e:
-    #         print(f"Database connection failed: {e}. Retrying...")
-    #         time.sleep(2)  # Wait before retrying
-    # else:
-    #     raise Exception("Failed to connect to database after retries")
+    # Database connection retry logic (uncomment for production)
+    for _ in range(3):  # Retry 3 times
+        try:
+            with app.app_context():
+                db.session.execute(text("SELECT 1"))  # Test connection
+            break
+        except exc.OperationalError as e:
+            print(f"Database connection failed: {e}. Retrying...")
+            time.sleep(2)  # Wait before retrying
+    else:
+        print("Warning: Failed to connect to database after retries")
 
     from routes import bp
     app.register_blueprint(bp)

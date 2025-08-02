@@ -1,3 +1,31 @@
+# Python
 venv/
 __pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+.env
+.env.local
+.env.production
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Database
 instance/
+*.db
+*.sqlite
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
