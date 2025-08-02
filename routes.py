@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request, make_response
 from models import Reservation 
 from models import Car, CarCategory
 from extensions import db
+from email_service import email_service  # Add this import
 import logging
 from datetime import datetime
 
@@ -91,7 +92,43 @@ def create_reservation():
         db.session.commit()
         
         logger.info(f"Reservation created: {reservation.id} for {reservation.email}")
-        return jsonify({"message": "Reservation successful", "reservation_id": reservation.id}), 201
+        
+        # Send confirmation email
+        try:
+            car_data = {
+                'name': car.name,
+                'model': car.model,
+                'category': car.category,
+                'price_per_day': car.price_per_day
+            }
+            
+            reservation_data = {
+                'firstname': reservation.firstname,
+                'lastname': reservation.lastname,
+                'email': reservation.email,
+                'home': reservation.home,
+                'cell': reservation.cell,
+                'start_date': reservation.start_date.strftime('%B %d, %Y'),
+                'end_date': reservation.end_date.strftime('%B %d, %Y'),
+                'total_price': reservation.total_price
+            }
+            
+            email_sent = email_service.send_booking_confirmation(reservation_data, car_data)
+            
+            if email_sent:
+                logger.info(f"Confirmation email sent to {reservation.email}")
+            else:
+                logger.warning(f"Failed to send confirmation email to {reservation.email}")
+                
+        except Exception as email_error:
+            logger.error(f"Error sending confirmation email: {email_error}")
+            # Don't fail the reservation if email fails
+        
+        return jsonify({
+            "message": "Reservation successful", 
+            "reservation_id": reservation.id,
+            "email_sent": email_sent if 'email_sent' in locals() else False
+        }), 201
         
     except Exception as e:
         db.session.rollback()
@@ -149,6 +186,7 @@ def health_check():
     """Health check endpoint for monitoring"""
     try:
         # Test database connection
+        from sqlalchemy import text
         db.session.execute(text("SELECT 1"))
         return jsonify({"status": "healthy", "database": "connected"}), 200
     except Exception as e:
