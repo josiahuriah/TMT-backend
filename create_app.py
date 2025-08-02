@@ -28,9 +28,11 @@ def create_app():
 
     # CORS configuration for production
     cors_origins = [
-        "https://tmt-rental-frontend.onrender.com",
-        "http://localhost:3000",  # For local development
-        "http://localhost:5173"   # For Vite dev server
+        "https://tmtsbahamas.com",           # Your custom domain
+        "https://www.tmtsbahamas.com",       # www version
+        "https://tmt-rental-frontend.onrender.com",  # Render URL
+        "http://localhost:3000",             # Local development
+        "http://localhost:5173"              # Vite dev server
     ]
     
     # If in development, allow all origins
