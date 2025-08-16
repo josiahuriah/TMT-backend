@@ -1,8 +1,7 @@
 from flask import Blueprint, jsonify, request, make_response
-from models import Reservation 
-from models import Car, CarCategory
+from models import Reservation, Car, CarCategory
 from extensions import db
-from email_service import email_service  
+from email_service import email_service  # Import email service
 import logging
 from datetime import datetime
 
@@ -52,6 +51,7 @@ def get_cars():
 def create_reservation():
     try:
         data = request.get_json()
+        logger.info(f"Received reservation request: {data}")
         
         # Validate required fields
         required_fields = ['car_id', 'firstname', 'lastname', 'email', 'start_date', 'end_date', 'total_price']
@@ -89,11 +89,14 @@ def create_reservation():
         car.quantity -= 1
 
         db.session.add(reservation)
+        db.session.flush()  # Get the ID before commit
+        reservation_id = reservation.id
         db.session.commit()
         
-        logger.info(f"Reservation created: {reservation.id} for {reservation.email}")
+        logger.info(f"Reservation created: {reservation_id} for {reservation.email}")
         
         # Send confirmation email
+        email_sent = False
         try:
             car_data = {
                 'name': car.name,
@@ -103,6 +106,7 @@ def create_reservation():
             }
             
             reservation_data = {
+                'id': reservation_id,
                 'firstname': reservation.firstname,
                 'lastname': reservation.lastname,
                 'email': reservation.email,
@@ -113,26 +117,27 @@ def create_reservation():
                 'total_price': reservation.total_price
             }
             
+            logger.info(f"Sending email to {reservation.email}")
             email_sent = email_service.send_booking_confirmation(reservation_data, car_data)
             
             if email_sent:
-                logger.info(f"Confirmation email sent to {reservation.email}")
+                logger.info(f"Confirmation email sent successfully to {reservation.email}")
             else:
                 logger.warning(f"Failed to send confirmation email to {reservation.email}")
                 
         except Exception as email_error:
-            logger.error(f"Error sending confirmation email: {email_error}")
+            logger.error(f"Error sending confirmation email: {email_error}", exc_info=True)
             # Don't fail the reservation if email fails
         
         return jsonify({
             "message": "Reservation successful", 
-            "reservation_id": reservation.id,
-            "email_sent": email_sent if 'email_sent' in locals() else False
+            "reservation_id": reservation_id,
+            "email_sent": email_sent
         }), 201
         
     except Exception as e:
         db.session.rollback()
-        logger.error(f"Error creating reservation: {e}")
+        logger.error(f"Error creating reservation: {e}", exc_info=True)
         return jsonify({"error": "Failed to create reservation"}), 500
     
 @bp.route("/reservations", methods=["GET"])
