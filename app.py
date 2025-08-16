@@ -2,7 +2,8 @@ from create_app import create_app
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
+if os.getenv("FLASK_ENV") != "production":
+    load_dotenv()
 
 app = create_app()
 
