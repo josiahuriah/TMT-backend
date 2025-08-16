@@ -12,6 +12,9 @@ class EmailService:
         self.base_url = os.getenv('MAILGUN_BASE_URL', 'https://api.mailgun.net/v3')
         self.from_email = os.getenv('FROM_EMAIL', f'bookings@{self.domain}')
         self.admin_email = os.getenv('ADMIN_EMAIL', 'info@tmtsbahamas.com')
+
+        logger.info(f"EmailService initialized with domain: {self.domain}")
+        logger.info(f"API Key present: {bool(self.api_key)}")
         
         if not self.api_key or not self.domain:
             logger.warning("Mailgun not configured properly. Email sending will be disabled.")
@@ -38,12 +41,18 @@ class EmailService:
             data["bcc"] = bcc
         
         try:
+            logger.info(f"Attempting to send email to {to_email}")
+            logger.info(f"Using URL: {url}")
+
             response = requests.post(
                 url,
                 auth=("api", self.api_key),
                 data=data,
                 timeout=10
             )
+
+            logger.info(f"Mailgun response status: {response.status_code}")
+            logger.info(f"Mailgun response: {response.text}")
             
             if response.status_code == 200:
                 logger.info(f"Email sent successfully to {to_email}")
@@ -58,6 +67,8 @@ class EmailService:
     
     def send_booking_confirmation(self, reservation_data, car_data):
         """Send booking confirmation email with receipt"""
+
+        logger.info(f"Preparing to send booking confirmation to {reservation_data.get('email')}")
         
         # Calculate rental details
         total_price = float(reservation_data.get('total_price', 0))

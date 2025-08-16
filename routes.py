@@ -174,21 +174,6 @@ def cancel_reservation(id):
         db.session.delete(reservation)
         db.session.commit()
         
-        db.session.flush()  # This ensures the reservation.id is available
-
-        # Update the reservation_data to include the ID
-        reservation_data = {
-            'id': reservation.id,  # Add this line
-            'firstname': reservation.firstname,
-            'lastname': reservation.lastname,
-            'email': reservation.email,
-            'home': reservation.home,
-            'cell': reservation.cell,
-            'start_date': reservation.start_date.strftime('%B %d, %Y'),
-            'end_date': reservation.end_date.strftime('%B %d, %Y'),
-            'total_price': reservation.total_price
-        }
-
         logger.info(f"Reservation {id} canceled")
         return jsonify({"message": "Reservation canceled"}), 200
     except Exception as e:
