@@ -370,5 +370,161 @@ class EmailService:
             bcc=self.admin_email  # Send copy to admin
         )
 
+    def send_contact_form_message(self, name, email, phone, message):
+        """Send contact form message to admin"""
+        
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; }}
+                .header {{ background: #2c3e50; color: white; padding: 20px; }}
+                .content {{ padding: 20px; background: #f9f9f9; }}
+                .message-box {{ background: white; padding: 20px; border-radius: 5px; margin: 20px 0; }}
+                .field {{ margin: 10px 0; }}
+                .label {{ font-weight: bold; color: #555; }}
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h2>New Contact Form Message</h2>
+            </div>
+            <div class="content">
+                <div class="message-box">
+                    <div class="field">
+                        <span class="label">From:</span> {name}
+                    </div>
+                    <div class="field">
+                        <span class="label">Email:</span> <a href="mailto:{email}">{email}</a>
+                    </div>
+                    <div class="field">
+                        <span class="label">Phone:</span> {phone}
+                    </div>
+                    <div class="field">
+                        <span class="label">Message:</span>
+                        <p style="background: #f5f5f5; padding: 15px; border-left: 3px solid #3498db;">
+                            {message}
+                        </p>
+                    </div>
+                    <div class="field">
+                        <span class="label">Received:</span> {datetime.now().strftime('%B %d, %Y at %I:%M %p')}
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        text_content = f"""
+        New Contact Form Message
+        
+        From: {name}
+        Email: {email}
+        Phone: {phone}
+        
+        Message:
+        {message}
+        
+        Received: {datetime.now().strftime('%B %d, %Y at %I:%M %p')}
+        """
+        
+        return self.send_email(
+            to_email=self.admin_email,
+            subject=f"Contact Form: Message from {name}",
+            html_content=html_content,
+            text_content=text_content
+        )
+
+    def send_contact_confirmation(self, to_email, name):
+        """Send confirmation email to user who submitted contact form"""
+        
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; }}
+                .header {{ background: #2c3e50; color: white; padding: 30px; text-align: center; }}
+                .content {{ padding: 30px; }}
+                .footer {{ background: #f0f0f0; padding: 20px; text-align: center; font-size: 12px; }}
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>Thank You for Contacting Us!</h1>
+            </div>
+            <div class="content">
+                <p>Dear {name},</p>
+                
+                <p>We've received your message and appreciate you reaching out to TMT's Coconut Cruisers.</p>
+                
+                <p>Our team will review your message and get back to you within 24-48 hours.</p>
+                
+                <p>If you need immediate assistance, please call us at:</p>
+                <p>📞 +1 (242) 472-0016 or +1 (242) 367-0942</p>
+                
+                <p>Best regards,<br>
+                TMT's Coconut Cruisers Team</p>
+            </div>
+            <div class="footer">
+                <p>TMT's Coconut Cruisers | Deadman's Cay, Bahamas</p>
+            </div>
+        </body>
+        </html>
+        """
+        
+        text_content = f"""
+        Thank You for Contacting Us!
+        
+        Dear {name},
+        
+        We've received your message and appreciate you reaching out to TMT's Coconut Cruisers.
+        
+        Our team will review your message and get back to you within 24-48 hours.
+        
+        If you need immediate assistance, please call us at:
+        +1 (242) 472-0016 or +1 (242) 367-0942
+        
+        Best regards,
+        TMT's Coconut Cruisers Team
+        """
+        
+        return self.send_email(
+            to_email=to_email,
+            subject="Thank you for contacting TMT's Coconut Cruisers",
+            html_content=html_content,
+            text_content=text_content
+        )
+
+    def send_admin_email(self, to_email, subject, message, is_html=False):
+        """Send email from admin panel"""
+        
+        if is_html:
+            html_content = message
+            text_content = None
+        else:
+            # Convert plain text to HTML
+            html_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body {{ font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; }}
+                </style>
+            </head>
+            <body>
+                {message.replace(chr(10), '<br>')}
+            </body>
+            </html>
+            """
+            text_content = message
+        
+        return self.send_email(
+            to_email=to_email,
+            subject=subject,
+            html_content=html_content,
+            text_content=text_content
+        )
 # Create a global instance
 email_service = EmailService()
