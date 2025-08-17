@@ -201,3 +201,153 @@ def health_check():
 @bp.route("/", methods=["GET"])
 def home():
     return jsonify({"status": "TMT Rental API is live", "version": "1.0"}), 200
+
+# Add this route to your routes.py
+@bp.route("/contact", methods=["POST"])
+def send_contact_message():
+    """Handle contact form submissions"""
+    try:
+        data = request.get_json()
+        logger.info(f"Received contact form submission from {data.get('email')}")
+        
+        # Validate required fields
+        required_fields = ['name', 'email', 'message']
+        for field in required_fields:
+            if field not in data or not data[field]:
+                return jsonify({"error": f"Missing required field: {field}"}), 400
+        
+        # Send email to admin
+        from email_service import email_service
+        success = email_service.send_contact_form_message(
+            name=data.get('name'),
+            email=data.get('email'),
+            phone=data.get('phone', 'Not provided'),
+            message=data.get('message')
+        )
+        
+        if success:
+            # Also send confirmation to the user
+            email_service.send_contact_confirmation(
+                to_email=data.get('email'),
+                name=data.get('name')
+            )
+            
+            return jsonify({
+                "message": "Message sent successfully",
+                "success": True
+            }), 200
+        else:
+            return jsonify({
+                "error": "Failed to send message",
+                "success": False
+            }), 500
+            
+    except Exception as e:
+        logger.error(f"Error processing contact form: {e}")
+        return jsonify({"error": "Failed to process contact form"}), 500
+
+@bp.route("/admin/send-email", methods=["POST"])
+def admin_send_email():
+    """Allow admins to send emails from the platform"""
+    try:
+        # TODO: Add authentication check here
+        # For now, you might want to add a simple API key check
+        
+        data = request.get_json()
+        
+        # Validate required fields
+        required_fields = ['to', 'subject', 'message']
+        for field in required_fields:
+            if field not in data or not data[field]:
+                return jsonify({"error": f"Missing required field: {field}"}), 400
+        
+        from email_service import email_service
+        success = email_service.send_admin_email(
+            to_email=data.get('to'),
+            subject=data.get('subject'),
+            message=data.get('message'),
+            is_html=data.get('is_html', False)
+        )
+        
+        if success:
+            return jsonify({
+                "message": "Email sent successfully",
+                "success": True
+            }), 200
+        else:
+            return jsonify({
+                "error": "Failed to send email",
+                "success": False
+            }), 500
+            
+    except Exception as e:
+        logger.error(f"Error sending admin email: {e}")
+        return jsonify({"error": "Failed to send email"}), 500
+    
+from flask import Blueprint, jsonify, request, make_response
+from models import Reservation, Car, CarCategory
+from extensions import db
+from email_service import email_service  # Import email service
+import logging
+from datetime import datetime
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+bp = Blueprint("routes", __name__)
+
+# ... (keep all your existing routes) ...
+
+# ADD THIS NEW ROUTE
+@bp.route("/contact", methods=["POST", "OPTIONS"])
+def send_contact_message():
+    """Handle contact form submissions"""
+    # Handle preflight OPTIONS request
+    if request.method == "OPTIONS":
+        response = make_response()
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        response.headers.add("Access-Control-Allow-Headers", "Content-Type")
+        response.headers.add("Access-Control-Allow-Methods", "POST, OPTIONS")
+        return response
+    
+    try:
+        data = request.get_json()
+        logger.info(f"Received contact form submission from {data.get('email')}")
+        
+        # Validate required fields
+        required_fields = ['name', 'email', 'message']
+        for field in required_fields:
+            if field not in data or not data[field]:
+                return jsonify({"error": f"Missing required field: {field}"}), 400
+        
+        # For now, let's send a simple email with the contact form data
+        success = email_service.send_contact_form_message(
+            name=data.get('name'),
+            email=data.get('email'),
+            phone=data.get('phone', 'Not provided'),
+            message=data.get('message')
+        )
+        
+        if success:
+            # Also send confirmation to the user
+            email_service.send_contact_confirmation(
+                to_email=data.get('email'),
+                name=data.get('name')
+            )
+            
+            logger.info(f"Contact form email sent successfully")
+            return jsonify({
+                "message": "Message sent successfully",
+                "success": True
+            }), 200
+        else:
+            logger.error("Failed to send contact form email")
+            return jsonify({
+                "error": "Failed to send message",
+                "success": False
+            }), 500
+            
+    except Exception as e:
+        logger.error(f"Error processing contact form: {e}", exc_info=True)
+        return jsonify({"error": "Failed to process contact form"}), 500
