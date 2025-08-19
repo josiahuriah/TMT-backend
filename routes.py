@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request, make_response
 from models import Reservation, Car, CarCategory
 from extensions import db
-from email_service import email_service  # Import email service
+from email_service import email_service
 import logging
 from datetime import datetime
 
@@ -16,8 +16,15 @@ def handle_error(error):
     logger.error(f"Unhandled error: {error}")
     return jsonify({"error": "Internal server error"}), 500
 
-@bp.route("/car-categories", methods=["GET"])
+@bp.route("/car-categories", methods=["GET", "OPTIONS"])
 def get_car_categories():
+    if request.method == "OPTIONS":
+        response = make_response()
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        response.headers.add("Access-Control-Allow-Headers", "Content-Type")
+        response.headers.add("Access-Control-Allow-Methods", "GET, OPTIONS")
+        return response
+    
     try:
         categories = CarCategory.query.all()
         return jsonify([{
@@ -31,8 +38,15 @@ def get_car_categories():
         logger.error(f"Error fetching car categories: {e}")
         return jsonify({"error": "Failed to fetch car categories"}), 500
 
-@bp.route("/cars", methods=["GET"])
+@bp.route("/cars", methods=["GET", "OPTIONS"])
 def get_cars():
+    if request.method == "OPTIONS":
+        response = make_response()
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        response.headers.add("Access-Control-Allow-Headers", "Content-Type")
+        response.headers.add("Access-Control-Allow-Methods", "GET, OPTIONS")
+        return response
+    
     try:
         cars = Car.query.all()
         return jsonify([{
@@ -47,8 +61,15 @@ def get_cars():
         logger.error(f"Error fetching cars: {e}")
         return jsonify({"error": "Failed to fetch cars"}), 500
     
-@bp.route("/reservations", methods=["POST"])
+@bp.route("/reservations", methods=["POST", "OPTIONS"])
 def create_reservation():
+    if request.method == "OPTIONS":
+        response = make_response()
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        response.headers.add("Access-Control-Allow-Headers", "Content-Type")
+        response.headers.add("Access-Control-Allow-Methods", "POST, OPTIONS")
+        return response
+    
     try:
         data = request.get_json()
         logger.info(f"Received reservation request: {data}")
@@ -140,8 +161,15 @@ def create_reservation():
         logger.error(f"Error creating reservation: {e}", exc_info=True)
         return jsonify({"error": "Failed to create reservation"}), 500
     
-@bp.route("/reservations", methods=["GET"])
+@bp.route("/reservations", methods=["GET", "OPTIONS"])
 def get_reservations():
+    if request.method == "OPTIONS":
+        response = make_response()
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        response.headers.add("Access-Control-Allow-Headers", "Content-Type, Range")
+        response.headers.add("Access-Control-Allow-Methods", "GET, OPTIONS")
+        return response
+    
     try:
         reservations = Reservation.query.all()
         reservation_list = [{
@@ -168,8 +196,15 @@ def get_reservations():
         logger.error(f"Error fetching reservations: {e}")
         return jsonify({"error": "Failed to fetch reservations"}), 500
 
-@bp.route("/reservations/<int:id>", methods=["DELETE"])
+@bp.route("/reservations/<int:id>", methods=["DELETE", "OPTIONS"])
 def cancel_reservation(id):
+    if request.method == "OPTIONS":
+        response = make_response()
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        response.headers.add("Access-Control-Allow-Headers", "Content-Type")
+        response.headers.add("Access-Control-Allow-Methods", "DELETE, OPTIONS")
+        return response
+    
     try:
         reservation = Reservation.query.get_or_404(id)
         car = Car.query.get(reservation.car_id)
@@ -186,124 +221,9 @@ def cancel_reservation(id):
         logger.error(f"Error canceling reservation {id}: {e}")
         return jsonify({"error": "Failed to cancel reservation"}), 500
 
-@bp.route("/health", methods=["GET"])
-def health_check():
-    """Health check endpoint for monitoring"""
-    try:
-        # Test database connection
-        from sqlalchemy import text
-        db.session.execute(text("SELECT 1"))
-        return jsonify({"status": "healthy", "database": "connected"}), 200
-    except Exception as e:
-        logger.error(f"Health check failed: {e}")
-        return jsonify({"status": "unhealthy", "database": "disconnected"}), 503
-
-@bp.route("/", methods=["GET"])
-def home():
-    return jsonify({"status": "TMT Rental API is live", "version": "1.0"}), 200
-
-# Add this route to your routes.py
-@bp.route("/contact", methods=["POST"])
-def send_contact_message():
-    """Handle contact form submissions"""
-    try:
-        data = request.get_json()
-        logger.info(f"Received contact form submission from {data.get('email')}")
-        
-        # Validate required fields
-        required_fields = ['name', 'email', 'message']
-        for field in required_fields:
-            if field not in data or not data[field]:
-                return jsonify({"error": f"Missing required field: {field}"}), 400
-        
-        # Send email to admin
-        from email_service import email_service
-        success = email_service.send_contact_form_message(
-            name=data.get('name'),
-            email=data.get('email'),
-            phone=data.get('phone', 'Not provided'),
-            message=data.get('message')
-        )
-        
-        if success:
-            # Also send confirmation to the user
-            email_service.send_contact_confirmation(
-                to_email=data.get('email'),
-                name=data.get('name')
-            )
-            
-            return jsonify({
-                "message": "Message sent successfully",
-                "success": True
-            }), 200
-        else:
-            return jsonify({
-                "error": "Failed to send message",
-                "success": False
-            }), 500
-            
-    except Exception as e:
-        logger.error(f"Error processing contact form: {e}")
-        return jsonify({"error": "Failed to process contact form"}), 500
-
-@bp.route("/admin/send-email", methods=["POST"])
-def admin_send_email():
-    """Allow admins to send emails from the platform"""
-    try:
-        # TODO: Add authentication check here
-        # For now, you might want to add a simple API key check
-        
-        data = request.get_json()
-        
-        # Validate required fields
-        required_fields = ['to', 'subject', 'message']
-        for field in required_fields:
-            if field not in data or not data[field]:
-                return jsonify({"error": f"Missing required field: {field}"}), 400
-        
-        from email_service import email_service
-        success = email_service.send_admin_email(
-            to_email=data.get('to'),
-            subject=data.get('subject'),
-            message=data.get('message'),
-            is_html=data.get('is_html', False)
-        )
-        
-        if success:
-            return jsonify({
-                "message": "Email sent successfully",
-                "success": True
-            }), 200
-        else:
-            return jsonify({
-                "error": "Failed to send email",
-                "success": False
-            }), 500
-            
-    except Exception as e:
-        logger.error(f"Error sending admin email: {e}")
-        return jsonify({"error": "Failed to send email"}), 500
-    
-from flask import Blueprint, jsonify, request, make_response
-from models import Reservation, Car, CarCategory
-from extensions import db
-from email_service import email_service  # Import email service
-import logging
-from datetime import datetime
-
-# Set up logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-bp = Blueprint("routes", __name__)
-
-# ... (keep all your existing routes) ...
-
-# ADD THIS NEW ROUTE
 @bp.route("/contact", methods=["POST", "OPTIONS"])
 def send_contact_message():
     """Handle contact form submissions"""
-    # Handle preflight OPTIONS request
     if request.method == "OPTIONS":
         response = make_response()
         response.headers.add("Access-Control-Allow-Origin", "*")
@@ -321,7 +241,7 @@ def send_contact_message():
             if field not in data or not data[field]:
                 return jsonify({"error": f"Missing required field: {field}"}), 400
         
-        # For now, let's send a simple email with the contact form data
+        # Send email to admin
         success = email_service.send_contact_form_message(
             name=data.get('name'),
             email=data.get('email'),
@@ -351,3 +271,60 @@ def send_contact_message():
     except Exception as e:
         logger.error(f"Error processing contact form: {e}", exc_info=True)
         return jsonify({"error": "Failed to process contact form"}), 500
+
+@bp.route("/admin/send-email", methods=["POST", "OPTIONS"])
+def admin_send_email():
+    """Allow admins to send emails from the platform"""
+    if request.method == "OPTIONS":
+        response = make_response()
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        response.headers.add("Access-Control-Allow-Headers", "Content-Type")
+        response.headers.add("Access-Control-Allow-Methods", "POST, OPTIONS")
+        return response
+    
+    try:
+        data = request.get_json()
+        
+        # Validate required fields
+        required_fields = ['to', 'subject', 'message']
+        for field in required_fields:
+            if field not in data or not data[field]:
+                return jsonify({"error": f"Missing required field: {field}"}), 400
+        
+        success = email_service.send_admin_email(
+            to_email=data.get('to'),
+            subject=data.get('subject'),
+            message=data.get('message'),
+            is_html=data.get('is_html', False)
+        )
+        
+        if success:
+            return jsonify({
+                "message": "Email sent successfully",
+                "success": True
+            }), 200
+        else:
+            return jsonify({
+                "error": "Failed to send email",
+                "success": False
+            }), 500
+            
+    except Exception as e:
+        logger.error(f"Error sending admin email: {e}")
+        return jsonify({"error": "Failed to send email"}), 500
+
+@bp.route("/health", methods=["GET"])
+def health_check():
+    """Health check endpoint for monitoring"""
+    try:
+        # Test database connection
+        from sqlalchemy import text
+        db.session.execute(text("SELECT 1"))
+        return jsonify({"status": "healthy", "database": "connected"}), 200
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return jsonify({"status": "unhealthy", "database": "disconnected"}), 503
+
+@bp.route("/", methods=["GET"])
+def home():
+    return jsonify({"status": "TMT Rental API is live", "version": "1.0"}), 200
