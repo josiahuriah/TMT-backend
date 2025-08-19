@@ -10,7 +10,6 @@ from extensions import db
 from models import Reservation, Car, CarCategory
 from routes import bp
 
- 
 def create_app():
     app = Flask(__name__)
 
@@ -28,11 +27,11 @@ def create_app():
 
     # CORS configuration for production
     cors_origins = [
-        "https://tmtsbahamas.com",           # Your custom domain
-        "https://www.tmtsbahamas.com",       # www version
-        "https://tmt-rental-frontend.onrender.com",  # Render URL
-        "http://localhost:3000",             # Local development
-        "http://localhost:5173"              # Vite dev server
+        "https://tmtsbahamas.com",
+        "https://www.tmtsbahamas.com",
+        "https://tmt-rental-frontend.onrender.com",
+        "http://localhost:3000",
+        "http://localhost:5173"
     ]
     
     # If in development, allow all origins
@@ -43,18 +42,18 @@ def create_app():
          origins=cors_origins,
          supports_credentials=True,
          methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-         allow_headers=["Content-Type", "Authorization", "Range"],
-         expose_headers=["Content-Range"])
+         allow_headers=["Content-Type", "Authorization", "Range", "X-Requested-With"],
+         expose_headers=["Content-Range", "X-Total-Count"])
 
-    # Database connection retry logic (uncomment for production)
-    for _ in range(3):  # Retry 3 times
+    # Database connection retry logic
+    for _ in range(3):
         try:
             with app.app_context():
-                db.session.execute(text("SELECT 1"))  # Test connection
+                db.session.execute(text("SELECT 1"))
             break
         except exc.OperationalError as e:
             print(f"Database connection failed: {e}. Retrying...")
-            time.sleep(2)  # Wait before retrying
+            time.sleep(2)
     else:
         print("Warning: Failed to connect to database after retries")
 

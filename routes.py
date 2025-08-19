@@ -166,8 +166,9 @@ def get_reservations():
     if request.method == "OPTIONS":
         response = make_response()
         response.headers.add("Access-Control-Allow-Origin", "*")
-        response.headers.add("Access-Control-Allow-Headers", "Content-Type, Range")
+        response.headers.add("Access-Control-Allow-Headers", "Content-Type, Range, Authorization") 
         response.headers.add("Access-Control-Allow-Methods", "GET, OPTIONS")
+        response.headers.add("Access-Control-Expose-Headers", "Content-Range, X-Total-Count")
         return response
     
     try:
