@@ -16,15 +16,8 @@ def handle_error(error):
     logger.error(f"Unhandled error: {error}")
     return jsonify({"error": "Internal server error"}), 500
 
-@bp.route("/car-categories", methods=["GET", "OPTIONS"])
+@bp.route("/car-categories", methods=["GET"])
 def get_car_categories():
-    if request.method == "OPTIONS":
-        response = make_response()
-        response.headers.add("Access-Control-Allow-Origin", "*")
-        response.headers.add("Access-Control-Allow-Headers", "Content-Type")
-        response.headers.add("Access-Control-Allow-Methods", "GET, OPTIONS")
-        return response
-    
     try:
         categories = CarCategory.query.all()
         return jsonify([{
@@ -38,15 +31,8 @@ def get_car_categories():
         logger.error(f"Error fetching car categories: {e}")
         return jsonify({"error": "Failed to fetch car categories"}), 500
 
-@bp.route("/cars", methods=["GET", "OPTIONS"])
+@bp.route("/cars", methods=["GET"])
 def get_cars():
-    if request.method == "OPTIONS":
-        response = make_response()
-        response.headers.add("Access-Control-Allow-Origin", "*")
-        response.headers.add("Access-Control-Allow-Headers", "Content-Type")
-        response.headers.add("Access-Control-Allow-Methods", "GET, OPTIONS")
-        return response
-    
     try:
         cars = Car.query.all()
         return jsonify([{
@@ -61,15 +47,8 @@ def get_cars():
         logger.error(f"Error fetching cars: {e}")
         return jsonify({"error": "Failed to fetch cars"}), 500
     
-@bp.route("/reservations", methods=["POST", "OPTIONS"])
-def create_reservation():
-    if request.method == "OPTIONS":
-        response = make_response()
-        response.headers.add("Access-Control-Allow-Origin", "*")
-        response.headers.add("Access-Control-Allow-Headers", "Content-Type")
-        response.headers.add("Access-Control-Allow-Methods", "POST, OPTIONS")
-        return response
-    
+@bp.route("/reservations", methods=["POST"])
+def create_reservation():    
     try:
         data = request.get_json()
         logger.info(f"Received reservation request: {data}")
@@ -161,16 +140,8 @@ def create_reservation():
         logger.error(f"Error creating reservation: {e}", exc_info=True)
         return jsonify({"error": "Failed to create reservation"}), 500
     
-@bp.route("/reservations", methods=["GET", "OPTIONS"])
+@bp.route("/reservations", methods=["GET"])
 def get_reservations():
-    if request.method == "OPTIONS":
-        response = make_response()
-        response.headers.add("Access-Control-Allow-Origin", "*")
-        response.headers.add("Access-Control-Allow-Headers", "Content-Type, Range, Authorization") 
-        response.headers.add("Access-Control-Allow-Methods", "GET, OPTIONS")
-        response.headers.add("Access-Control-Expose-Headers", "Content-Range, X-Total-Count")
-        return response
-    
     try:
         reservations = Reservation.query.all()
         reservation_list = [{
@@ -190,27 +161,18 @@ def get_reservations():
         response = make_response(jsonify(reservation_list))
         total_count = len(reservation_list)
         response.headers['Content-Range'] = f"reservations 0-{total_count - 1}/{total_count}"
-        response.headers['Access-Control-Expose-Headers'] = 'Content-Range'
-
         return response
     except Exception as e:
         logger.error(f"Error fetching reservations: {e}")
         return jsonify({"error": "Failed to fetch reservations"}), 500
 
-@bp.route("/reservations/<int:id>", methods=["DELETE", "OPTIONS"])
+@bp.route("/reservations/<int:id>", methods=["DELETE"])
 def cancel_reservation(id):
-    if request.method == "OPTIONS":
-        response = make_response()
-        response.headers.add("Access-Control-Allow-Origin", "*")
-        response.headers.add("Access-Control-Allow-Headers", "Content-Type")
-        response.headers.add("Access-Control-Allow-Methods", "DELETE, OPTIONS")
-        return response
-    
     try:
         reservation = Reservation.query.get_or_404(id)
         car = Car.query.get(reservation.car_id)
         if car:
-            car.quantity += 1  # Make car available again
+            car.quantity += 1
         
         db.session.delete(reservation)
         db.session.commit()
