@@ -27,9 +27,9 @@ def create_app():
 
     # CORS configuration for production
     cors_origins = [
+        "https://tmt-rental-frontend.onrender.com",
         "https://tmtsbahamas.com",
         "https://www.tmtsbahamas.com",
-        "https://tmt-rental-frontend.onrender.com",
         "http://localhost:3000",
         "http://localhost:5173"
     ]
