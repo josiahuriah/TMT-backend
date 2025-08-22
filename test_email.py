@@ -1,4 +1,4 @@
-# test_email_complete.py
+# test_hostinger_email.py
 import os
 from dotenv import load_dotenv
 load_dotenv()
@@ -11,7 +11,7 @@ test_reservation = {
     'id': '123',
     'firstname': 'Test',
     'lastname': 'User',
-    'email': 'josh.duncanson@gmail.com',  # Your email
+    'email': 'josh.duncanson@gmail.com',  # Your email for testing
     'cell': '242-555-1234',
     'start_date': datetime.now().strftime('%B %d, %Y'),
     'end_date': (datetime.now() + timedelta(days=5)).strftime('%B %d, %Y'),
@@ -24,8 +24,9 @@ test_car = {
     'price_per_day': 70.00
 }
 
-print(f"API Key present: {bool(os.getenv('MAILGUN_API_KEY'))}")
-print(f"Domain: {os.getenv('MAILGUN_DOMAIN')}")
+print(f"SMTP Server: {os.getenv('SMTP_SERVER')}")
+print(f"SMTP Username: {os.getenv('SMTP_USERNAME')}")
+print(f"Credentials configured: {bool(os.getenv('SMTP_PASSWORD'))}")
 
 # Send test email
 success = email_service.send_booking_confirmation(test_reservation, test_car)

@@ -1,5 +1,7 @@
 import os
-import requests
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from datetime import datetime
 import logging
 
@@ -7,67 +9,76 @@ logger = logging.getLogger(__name__)
 
 class EmailService:
     def __init__(self):
-        self.api_key = os.getenv('MAILGUN_API_KEY')
-        self.domain = os.getenv('MAILGUN_DOMAIN')
-        self.base_url = os.getenv('MAILGUN_BASE_URL', 'https://api.mailgun.net/v3')
-        self.from_email = os.getenv('FROM_EMAIL', f'bookings@{self.domain}')
-        self.admin_email = os.getenv('ADMIN_EMAIL', 'info@tmtsbahamas.com')
-
-        logger.info(f"EmailService initialized with domain: {self.domain}")
-        logger.info(f"API Key present: {bool(self.api_key)}")
+        self.smtp_server = os.getenv('SMTP_SERVER', 'smtp.hostinger.com')
+        self.smtp_port = int(os.getenv('SMTP_PORT', '587'))
+        self.smtp_username = os.getenv('SMTP_USERNAME')
+        self.smtp_password = os.getenv('SMTP_PASSWORD')
+        self.from_email = os.getenv('FROM_EMAIL', 'help@tmtsbahamas.com')
+        self.from_name = os.getenv('FROM_NAME', 'TMT Coconut Cruisers')
+        self.admin_email = os.getenv('ADMIN_EMAIL', 'help@tmtsbahamas.com')
         
-        if not self.api_key or not self.domain:
-            logger.warning("Mailgun not configured properly. Email sending will be disabled.")
+        logger.info(f"EmailService initialized with SMTP server: {self.smtp_server}")
+        logger.info(f"From email: {self.from_email}")
+        
+        if not self.smtp_username or not self.smtp_password:
+            logger.warning("SMTP credentials not configured. Email sending will be disabled.")
     
-    def send_email(self, to_email, subject, html_content, text_content=None, bcc=None):
-        """Send an email using Mailgun API"""
-        if not self.api_key or not self.domain:
-            logger.error("Mailgun not configured. Cannot send email.")
+    def send_email(self, to_email, subject, html_content, text_content=None, cc=None, bcc=None):
+        """Send an email using SMTP"""
+        if not self.smtp_username or not self.smtp_password:
+            logger.error("SMTP not configured. Cannot send email.")
             return False
         
-        url = f"{self.base_url}/{self.domain}/messages"
-        
-        data = {
-            "from": f"TMT Coconut Cruisers <{self.from_email}>",
-            "to": to_email,
-            "subject": subject,
-            "html": html_content,
-        }
-        
-        if text_content:
-            data["text"] = text_content
-            
-        if bcc:
-            data["bcc"] = bcc
-        
         try:
-            logger.info(f"Attempting to send email to {to_email}")
-            logger.info(f"Using URL: {url}")
-
-            response = requests.post(
-                url,
-                auth=("api", self.api_key),
-                data=data,
-                timeout=10
-            )
-
-            logger.info(f"Mailgun response status: {response.status_code}")
-            logger.info(f"Mailgun response: {response.text}")
+            # Create message
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = subject
+            msg['From'] = f"{self.from_name} <{self.from_email}>"
+            msg['To'] = to_email
             
-            if response.status_code == 200:
-                logger.info(f"Email sent successfully to {to_email}")
-                return True
+            if cc:
+                msg['Cc'] = cc if isinstance(cc, str) else ', '.join(cc)
+            
+            # Add text and HTML parts
+            if text_content:
+                text_part = MIMEText(text_content, 'plain')
+                msg.attach(text_part)
+            
+            html_part = MIMEText(html_content, 'html')
+            msg.attach(html_part)
+            
+            # Prepare recipient list
+            recipients = [to_email]
+            if cc:
+                recipients.extend(cc if isinstance(cc, list) else [cc])
+            if bcc:
+                recipients.extend(bcc if isinstance(bcc, list) else [bcc])
+            
+            # Connect and send
+            logger.info(f"Connecting to SMTP server {self.smtp_server}:{self.smtp_port}")
+            
+            if self.smtp_port == 465:
+                # SSL connection
+                server = smtplib.SMTP_SSL(self.smtp_server, self.smtp_port)
             else:
-                logger.error(f"Failed to send email: {response.status_code} - {response.text}")
-                return False
-                
+                # TLS connection
+                server = smtplib.SMTP(self.smtp_server, self.smtp_port)
+                server.starttls()
+            
+            server.login(self.smtp_username, self.smtp_password)
+            server.send_message(msg, from_addr=self.from_email, to_addrs=recipients)
+            server.quit()
+            
+            logger.info(f"Email sent successfully to {to_email}")
+            return True
+            
         except Exception as e:
             logger.error(f"Error sending email: {str(e)}")
             return False
     
     def send_booking_confirmation(self, reservation_data, car_data):
         """Send booking confirmation email with receipt"""
-
+        
         logger.info(f"Preparing to send booking confirmation to {reservation_data.get('email')}")
         
         # Calculate rental details
@@ -87,7 +98,7 @@ class EmailService:
         # Generate booking reference number
         booking_ref = f"TMT-{datetime.now().strftime('%Y%m%d')}-{reservation_data.get('id', '000')}"
         
-        # Create HTML email content with receipt styling
+        # Create HTML email content
         html_content = f"""
         <!DOCTYPE html>
         <html>
@@ -170,14 +181,6 @@ class EmailService:
                     padding: 15px;
                     margin: 20px 0;
                 }}
-                .info-section h3 {{
-                    margin-top: 0;
-                    color: #856404;
-                }}
-                .info-section ul {{
-                    margin: 10px 0;
-                    padding-left: 20px;
-                }}
                 .footer {{ 
                     background-color: #2c3e50; 
                     color: white;
@@ -188,15 +191,6 @@ class EmailService:
                 .footer a {{
                     color: #3498db;
                     text-decoration: none;
-                }}
-                .button {{
-                    display: inline-block;
-                    padding: 12px 30px;
-                    background: #3498db;
-                    color: white;
-                    text-decoration: none;
-                    border-radius: 5px;
-                    margin: 20px 0;
                 }}
             </style>
         </head>
@@ -210,7 +204,7 @@ class EmailService:
                 <div class="content">
                     <p style="font-size: 16px;">Dear <strong>{reservation_data.get('firstname', '')} {reservation_data.get('lastname', '')}</strong>,</p>
                     
-                    <p>Thank you for choosing TMT's Coconut Cruisers! Your booking has been confirmed and your payment has been processed successfully.</p>
+                    <p>Thank you for choosing TMT's Coconut Cruisers! Your booking has been confirmed.</p>
                     
                     <div class="receipt-box">
                         <div class="receipt-header">
@@ -255,16 +249,6 @@ class EmailService:
                             <span class="detail-value">{end_date}</span>
                         </div>
                         
-                        <div class="detail-row">
-                            <span class="detail-label">Rental Duration:</span>
-                            <span class="detail-value">{rental_days} days</span>
-                        </div>
-                        
-                        <div class="detail-row">
-                            <span class="detail-label">Daily Rate:</span>
-                            <span class="detail-value">${car_data.get('price_per_day', 0):.2f}</span>
-                        </div>
-                        
                         <div class="total-row">
                             <span>TOTAL PAID:</span>
                             <span>${total_price:.2f} USD</span>
@@ -281,21 +265,11 @@ class EmailService:
                         </ul>
                     </div>
                     
-                    <div style="background: #d4edda; border-left: 4px solid #28a745; padding: 15px; margin: 20px 0;">
-                        <h3 style="margin-top: 0; color: #155724;">✅ What's Next?</h3>
-                        <ol style="margin: 10px 0; padding-left: 20px;">
-                            <li>Save this email for your records</li>
-                            <li>Bring your driver's license and this confirmation to pickup</li>
-                            <li>Prepare $100 cash for the security deposit</li>
-                            <li>Contact us if you need to make any changes</li>
-                        </ol>
-                    </div>
-                    
                     <div style="text-align: center; margin: 30px 0;">
                         <h3>Need Help?</h3>
                         <p>Our team is here to assist you!</p>
                         <p>
-                            📧 <a href="mailto:info@tmtsbahamas.com">info@tmtsbahamas.com</a><br>
+                            📧 <a href="mailto:help@tmtsbahamas.com">help@tmtsbahamas.com</a><br>
                             📞 +1 (242) 472-0016 or +1 (242) 367-0942
                         </p>
                     </div>
@@ -305,8 +279,8 @@ class EmailService:
                     <p><strong>TMT's Coconut Cruisers</strong></p>
                     <p>Deadman's Cay, Long Island, Bahamas</p>
                     <p style="margin-top: 15px;">
-                        This is an automated confirmation email. Please do not reply directly to this email.<br>
-                        For assistance, contact us at <a href="mailto:info@tmtsbahamas.com">info@tmtsbahamas.com</a>
+                        This is an automated confirmation email from help@tmtsbahamas.com<br>
+                        For assistance, contact us at <a href="mailto:help@tmtsbahamas.com">help@tmtsbahamas.com</a>
                     </p>
                     <p style="margin-top: 15px; font-size: 10px; opacity: 0.7;">
                         © {datetime.now().year} TMT's Coconut Cruisers. All rights reserved.
@@ -337,8 +311,6 @@ class EmailService:
         Vehicle: {car_data.get('name', 'N/A')} ({car_data.get('category', 'N/A')})
         Pickup Date: {start_date}
         Return Date: {end_date}
-        Rental Duration: {rental_days} days
-        Daily Rate: ${car_data.get('price_per_day', 0):.2f}
         
         TOTAL PAID: ${total_price:.2f} USD
         
@@ -351,7 +323,7 @@ class EmailService:
         
         CONTACT US
         ----------
-        Email: info@tmtsbahamas.com
+        Email: help@tmtsbahamas.com
         Phone: +1 (242) 472-0016 or +1 (242) 367-0942
         
         Thank you for your business!
@@ -469,6 +441,7 @@ class EmailService:
             </div>
             <div class="footer">
                 <p>TMT's Coconut Cruisers | Deadman's Cay, Bahamas</p>
+                <p>Email: help@tmtsbahamas.com</p>
             </div>
         </body>
         </html>
@@ -488,6 +461,8 @@ class EmailService:
         
         Best regards,
         TMT's Coconut Cruisers Team
+        
+        Email: help@tmtsbahamas.com
         """
         
         return self.send_email(
@@ -515,10 +490,15 @@ class EmailService:
             </head>
             <body>
                 {message.replace(chr(10), '<br>')}
+                <br><br>
+                <p style="color: #666; font-size: 12px;">
+                    This email was sent from TMT's Coconut Cruisers<br>
+                    help@tmtsbahamas.com
+                </p>
             </body>
             </html>
             """
-            text_content = message
+            text_content = message + "\n\nThis email was sent from TMT's Coconut Cruisers\nhelp@tmtsbahamas.com"
         
         return self.send_email(
             to_email=to_email,
@@ -526,5 +506,6 @@ class EmailService:
             html_content=html_content,
             text_content=text_content
         )
+
 # Create a global instance
 email_service = EmailService()
